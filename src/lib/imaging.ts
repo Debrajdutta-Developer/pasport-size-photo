@@ -118,20 +118,22 @@ export function renderPassport(
   ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
   ctx.filter = "none";
 
-  // Skin smoothing approximation: subtle blur layer with low opacity
+  // Skin smoothing — soft-light blend preserves detail, avoids haze
   if (adjustments.smooth > 0) {
     ctx.save();
-    ctx.globalAlpha = adjustments.smooth / 300;
-    ctx.filter = `blur(${adjustments.smooth / 25}px)`;
+    ctx.globalCompositeOperation = "soft-light";
+    ctx.globalAlpha = Math.min(0.45, adjustments.smooth / 180);
+    ctx.filter = `blur(${0.6 + adjustments.smooth / 40}px)`;
     ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
     ctx.restore();
   }
 
-  // Sharpen approx: high-contrast overlay
+  // Sharpen — light unsharp via overlay at low opacity
   if (adjustments.sharpen > 0) {
     ctx.save();
     ctx.globalCompositeOperation = "overlay";
-    ctx.globalAlpha = adjustments.sharpen / 400;
+    ctx.globalAlpha = adjustments.sharpen / 500;
+    ctx.filter = `contrast(${110 + adjustments.sharpen / 4}%)`;
     ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
     ctx.restore();
   }
