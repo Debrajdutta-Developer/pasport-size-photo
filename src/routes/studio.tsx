@@ -112,11 +112,12 @@ function Studio() {
     canvas.width = previewW;
     canvas.height = previewH;
     const headRatio = (preset.headMin + preset.headMax) / 2 / preset.height;
+    const source = keepBackground && sourceImg ? sourceImg : cutoutCanvas;
     renderPassport(
-      ctx, cutoutCanvas, face, previewW, previewH, bgColor, headRatio, adjustments,
+      ctx, source, face, previewW, previewH, bgColor, headRatio, adjustments,
       offset.x, offset.y, zoom,
     );
-  }, [stage, cutoutCanvas, face, preset, bgColor, adjustments, zoom, offset]);
+  }, [stage, cutoutCanvas, sourceImg, keepBackground, face, preset, bgColor, adjustments, zoom, offset]);
 
   const renderHiRes = useCallback((): HTMLCanvasElement | null => {
     if (!cutoutCanvas || !face) return null;
@@ -125,11 +126,22 @@ function Studio() {
     const c = document.createElement("canvas");
     c.width = w; c.height = h;
     const headRatio = (preset.headMin + preset.headMax) / 2 / preset.height;
-    renderPassport(c.getContext("2d")!, cutoutCanvas, face, w, h, bgColor, headRatio, adjustments, offset.x * (w / 600), offset.y * (w / 600), zoom);
+    const source = keepBackground && sourceImg ? sourceImg : cutoutCanvas;
+    renderPassport(c.getContext("2d")!, source, face, w, h, bgColor, headRatio, adjustments, offset.x * (w / 600), offset.y * (w / 600), zoom);
     return c;
-  }, [cutoutCanvas, face, preset, bgColor, adjustments, zoom, offset]);
+  }, [cutoutCanvas, sourceImg, keepBackground, face, preset, bgColor, adjustments, zoom, offset]);
 
   const downloadCanvas = (canvas: HTMLCanvasElement, name: string, type: "png" | "jpg") => {
+    const mime = type === "png" ? "image/png" : "image/jpeg";
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `${name}.${type}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, mime, 0.95);
+  };
     const mime = type === "png" ? "image/png" : "image/jpeg";
     canvas.toBlob((blob) => {
       if (!blob) return;
