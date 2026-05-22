@@ -24,9 +24,9 @@ export function Cta() {
               Your perfect passport photo<br />is one upload away.
             </h2>
             <p className="mx-auto mt-6 max-w-xl text-white/70">
-              Free to try. Pro from ₹299/mo. No software, no studio, no Photoshop.
+              100% free. Runs in your browser. No software, no studio, no Photoshop.
             </p>
-            <a href="#pricing" className="btn-hero mt-8">
+            <a href="/studio" className="btn-hero mt-8">
               Get started for free <ArrowRight className="h-4 w-4" />
             </a>
           </div>
