@@ -1,5 +1,6 @@
 // Image processing helpers — all client-side, no API keys.
-import { removeBackground } from "@imgly/background-removal";
+// Note: @imgly/background-removal is imported lazily inside removeImageBackground
+// to keep it out of the SSR bundle (it touches window/Worker at load).
 
 export async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
