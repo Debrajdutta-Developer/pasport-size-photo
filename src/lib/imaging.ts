@@ -186,7 +186,10 @@ export function mmToPx(mm: number, dpi: number) {
   return Math.round((mm / 25.4) * dpi);
 }
 
-/** Build a print sheet canvas tiling N copies of the passport image. */
+/** Build a print sheet canvas tiling N copies of the passport image,
+ *  studio-style: tight equal gaps, optional thin border per photo, optional
+ *  hairline cut marks between cells. Forces a 3-column grid when copies % 3 === 0
+ *  to match traditional Indian/Asian studio passport prints. */
 export function buildPrintSheet(
   photoCanvas: HTMLCanvasElement,
   sheetWmm: number,
@@ -196,14 +199,19 @@ export function buildPrintSheet(
   copies: number,
   dpi: number,
   cutMarks: boolean,
+  options: { gapMm?: number; border?: boolean } = {},
 ): HTMLCanvasElement {
+  const gapMm = options.gapMm ?? 2;
+  const border = options.border ?? true;
   const W = mmToPx(sheetWmm, dpi);
   const H = mmToPx(sheetHmm, dpi);
   const pw = mmToPx(photoWmm, dpi);
   const ph = mmToPx(photoHmm, dpi);
-  const gap = mmToPx(3, dpi);
+  const gap = mmToPx(gapMm, dpi);
 
-  const cols = Math.floor((W + gap) / (pw + gap));
+  // Prefer 3 columns for multiples of 3 (studio standard 3×3 / 3×2)
+  let cols = Math.floor((W + gap) / (pw + gap));
+  if (copies % 3 === 0 && cols >= 3) cols = 3;
   const rows = Math.ceil(copies / cols);
   const totalW = cols * pw + (cols - 1) * gap;
   const totalH = rows * ph + (rows - 1) * gap;
@@ -224,19 +232,23 @@ export function buildPrintSheet(
       const x = offX + col * (pw + gap);
       const y = offY + r * (ph + gap);
       ctx.drawImage(photoCanvas, x, y, pw, ph);
+      if (border) {
+        ctx.strokeStyle = "rgba(0,0,0,0.18)";
+        ctx.lineWidth = Math.max(1, Math.round(dpi / 300));
+        ctx.strokeRect(x + 0.5, y + 0.5, pw - 1, ph - 1);
+      }
       if (cutMarks) {
-        ctx.strokeStyle = "#999";
+        ctx.strokeStyle = "#888";
         ctx.lineWidth = 1;
-        const m = 12;
-        // corner crops
+        const m = Math.round(dpi / 25);
         [[x, y], [x + pw, y], [x, y + ph], [x + pw, y + ph]].forEach(([cx, cy], i) => {
           ctx.beginPath();
-          const dx = i % 2 === 0 ? -m : m;
-          const dy = i < 2 ? -m : m;
+          const dxm = i % 2 === 0 ? -m : m;
+          const dym = i < 2 ? -m : m;
           ctx.moveTo(cx, cy);
-          ctx.lineTo(cx + dx, cy);
+          ctx.lineTo(cx + dxm, cy);
           ctx.moveTo(cx, cy);
-          ctx.lineTo(cx, cy + dy);
+          ctx.lineTo(cx, cy + dym);
           ctx.stroke();
         });
       }
