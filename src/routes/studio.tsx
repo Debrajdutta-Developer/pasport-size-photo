@@ -187,10 +187,10 @@ function Studio() {
       <main className="mx-auto max-w-7xl px-6 pb-20">
         <AnimatePresence mode="wait">
           {stage === "upload" && (
-            <UploadView key="upload" onUpload={handleUpload} error={error} />
+            <UploadView key="upload" onUpload={handleUpload} onUploadKeepBg={handleUploadKeepBg} error={error} />
           )}
           {stage === "processing" && (
-            <ProcessingView key="processing" step={pipelineStep} />
+            <ProcessingView key="processing" step={pipelineStep} bgProgress={bgProgress} skipBg={keepBackground} />
           )}
           {stage === "edit" && (
             <motion.div
