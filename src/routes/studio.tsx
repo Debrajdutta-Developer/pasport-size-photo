@@ -36,11 +36,14 @@ const PIPELINE = [
 function Studio() {
   const [stage, setStage] = useState<Stage>("upload");
   const [pipelineStep, setPipelineStep] = useState(0);
+  const [bgProgress, setBgProgress] = useState(0);
   const [sourceImg, setSourceImg] = useState<HTMLImageElement | null>(null);
   const [cutoutCanvas, setCutoutCanvas] = useState<HTMLCanvasElement | null>(null);
   const [face, setFace] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [preset, setPreset] = useState<Preset>(PRESETS[0]);
   const [bgColor, setBgColor] = useState(BG_COLORS[0].color);
+  const [keepBackground, setKeepBackground] = useState(false);
+  const [showGuides, setShowGuides] = useState(true);
   const [adjustments, setAdjustments] = useState<Adjustments>(DEFAULT_ADJUSTMENTS);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -48,7 +51,7 @@ function Studio() {
   const [printOpen, setPrintOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const handleUpload = useCallback(async (file: File) => {
+  const runPipeline = useCallback(async (file: File, skipBg: boolean) => {
     setError(null);
     if (!file.type.startsWith("image/")) {
       setError("Please upload an image file.");
@@ -56,6 +59,7 @@ function Studio() {
     }
     setStage("processing");
     setPipelineStep(0);
+    setBgProgress(0);
     try {
       const img = await loadImageFromFile(file);
       if (img.naturalWidth < 400 || img.naturalHeight < 400) {
@@ -64,8 +68,17 @@ function Studio() {
       setPipelineStep(1);
       const f = await detectFace(img);
       setPipelineStep(2);
-      await tick();
-      const cutout = await removeImageBackground(img);
+      let cutout: HTMLCanvasElement;
+      if (skipBg) {
+        // Skip heavy model — wrap source image as canvas (fast path)
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext("2d")!.drawImage(img, 0, 0);
+        cutout = c;
+        setBgProgress(1);
+      } else {
+        cutout = await removeImageBackground(img, (p) => setBgProgress(p));
+      }
       setPipelineStep(3);
       await tick();
       setPipelineStep(4);
@@ -75,6 +88,7 @@ function Studio() {
       setSourceImg(img);
       setCutoutCanvas(cutout);
       setFace(f);
+      setKeepBackground(skipBg);
       setStage("edit");
     } catch (e) {
       console.error(e);
@@ -82,6 +96,9 @@ function Studio() {
       setStage("upload");
     }
   }, []);
+
+  const handleUpload = useCallback((file: File) => runPipeline(file, false), [runPipeline]);
+  const handleUploadKeepBg = useCallback((file: File) => runPipeline(file, true), [runPipeline]);
 
   // Live preview render
   useEffect(() => {
@@ -95,11 +112,12 @@ function Studio() {
     canvas.width = previewW;
     canvas.height = previewH;
     const headRatio = (preset.headMin + preset.headMax) / 2 / preset.height;
+    const source = keepBackground && sourceImg ? sourceImg : cutoutCanvas;
     renderPassport(
-      ctx, cutoutCanvas, face, previewW, previewH, bgColor, headRatio, adjustments,
+      ctx, source, face, previewW, previewH, bgColor, headRatio, adjustments,
       offset.x, offset.y, zoom,
     );
-  }, [stage, cutoutCanvas, face, preset, bgColor, adjustments, zoom, offset]);
+  }, [stage, cutoutCanvas, sourceImg, keepBackground, face, preset, bgColor, adjustments, zoom, offset]);
 
   const renderHiRes = useCallback((): HTMLCanvasElement | null => {
     if (!cutoutCanvas || !face) return null;
@@ -108,9 +126,10 @@ function Studio() {
     const c = document.createElement("canvas");
     c.width = w; c.height = h;
     const headRatio = (preset.headMin + preset.headMax) / 2 / preset.height;
-    renderPassport(c.getContext("2d")!, cutoutCanvas, face, w, h, bgColor, headRatio, adjustments, offset.x * (w / 600), offset.y * (w / 600), zoom);
+    const source = keepBackground && sourceImg ? sourceImg : cutoutCanvas;
+    renderPassport(c.getContext("2d")!, source, face, w, h, bgColor, headRatio, adjustments, offset.x * (w / 600), offset.y * (w / 600), zoom);
     return c;
-  }, [cutoutCanvas, face, preset, bgColor, adjustments, zoom, offset]);
+  }, [cutoutCanvas, sourceImg, keepBackground, face, preset, bgColor, adjustments, zoom, offset]);
 
   const downloadCanvas = (canvas: HTMLCanvasElement, name: string, type: "png" | "jpg") => {
     const mime = type === "png" ? "image/png" : "image/jpeg";
@@ -168,10 +187,10 @@ function Studio() {
       <main className="mx-auto max-w-7xl px-6 pb-20">
         <AnimatePresence mode="wait">
           {stage === "upload" && (
-            <UploadView key="upload" onUpload={handleUpload} error={error} />
+            <UploadView key="upload" onUpload={handleUpload} onUploadKeepBg={handleUploadKeepBg} error={error} />
           )}
           {stage === "processing" && (
-            <ProcessingView key="processing" step={pipelineStep} />
+            <ProcessingView key="processing" step={pipelineStep} bgProgress={bgProgress} skipBg={keepBackground} />
           )}
           {stage === "edit" && (
             <motion.div
@@ -197,11 +216,34 @@ function Studio() {
                 <div className="relative mx-auto flex justify-center rounded-2xl bg-black/40 p-6">
                   <div className="relative">
                     <canvas ref={canvasRef} className="max-h-[70vh] rounded-xl shadow-[var(--shadow-elegant)]" />
-                    {/* Safe-zone guides */}
-                    <div className="pointer-events-none absolute inset-0 rounded-xl border border-[var(--violet)]/30">
-                      <div className="absolute inset-x-[12%] top-[13%] h-[55%] rounded-md border border-dashed border-[var(--violet)]/50" />
-                      <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 font-mono text-[10px] text-[var(--violet)]">SAFE ZONE</span>
-                    </div>
+                    {showGuides && (
+                      <div className="pointer-events-none absolute inset-0 rounded-xl">
+                        {/* Frame */}
+                        <div className="absolute inset-0 rounded-xl border border-[var(--violet)]/40" />
+                        {/* Head height band (preset compliant) */}
+                        <div
+                          className="absolute inset-x-[10%] border-y border-dashed border-[var(--violet)]/60"
+                          style={{
+                            top: `${(1 - preset.headMax / preset.height) * 50 + 5}%`,
+                            height: `${(preset.headMax / preset.height) * 100 - 8}%`,
+                          }}
+                        />
+                        {/* Face oval guide */}
+                        <div
+                          className="absolute left-1/2 -translate-x-1/2 rounded-[50%] border-2 border-[var(--violet)]/70 animate-pulse-glow"
+                          style={{
+                            top: "13%",
+                            width: "44%",
+                            height: `${((preset.headMin + preset.headMax) / 2 / preset.height) * 100}%`,
+                          }}
+                        />
+                        {/* Center crosshair */}
+                        <div className="absolute left-1/2 top-0 h-full w-px bg-[var(--violet)]/20" />
+                        <div className="absolute left-0 top-1/2 h-px w-full bg-[var(--violet)]/20" />
+                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 font-mono text-[10px] text-[var(--violet)]">FACE GUIDE</span>
+                        <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 font-mono text-[10px] text-emerald-400">● LIVE</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {validations.length > 0 && (
@@ -235,7 +277,11 @@ function Studio() {
                 </Panel>
 
                 <Panel title="Background">
-                  <div className="grid grid-cols-6 gap-2">
+                  <label className="mb-3 flex items-center justify-between rounded-lg border border-border bg-white/[0.02] px-3 py-2 text-xs">
+                    <span>Keep original background</span>
+                    <input type="checkbox" checked={keepBackground} onChange={(e) => setKeepBackground(e.target.checked)} />
+                  </label>
+                  <div className={`grid grid-cols-6 gap-2 transition-opacity ${keepBackground ? "opacity-30 pointer-events-none" : ""}`}>
                     {BG_COLORS.map((b) => (
                       <button
                         key={b.id}
@@ -248,6 +294,10 @@ function Studio() {
                       />
                     ))}
                   </div>
+                  <label className="mt-3 flex items-center justify-between rounded-lg px-1 text-xs text-muted-foreground">
+                    <span>Show live face guides</span>
+                    <input type="checkbox" checked={showGuides} onChange={(e) => setShowGuides(e.target.checked)} />
+                  </label>
                 </Panel>
 
                 <Panel title="Enhance">
@@ -336,8 +386,10 @@ function Slider({ label, value, min, max, onChange }: { label: string; value: nu
   );
 }
 
-function UploadView({ onUpload, error }: { onUpload: (f: File) => void; error: string | null }) {
+function UploadView({ onUpload, onUploadKeepBg, error }: { onUpload: (f: File) => void; onUploadKeepBg: (f: File) => void; error: string | null }) {
   const [dragging, setDragging] = useState(false);
+  const [mode, setMode] = useState<"ai" | "keep">("ai");
+  const submit = (f: File) => (mode === "ai" ? onUpload(f) : onUploadKeepBg(f));
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
@@ -349,24 +401,37 @@ function UploadView({ onUpload, error }: { onUpload: (f: File) => void; error: s
       </h1>
       <p className="mt-4 text-muted-foreground">Any selfie or portrait. JPG, PNG, HEIC. Processed in your browser — your photo never leaves your device.</p>
 
+      <div className="mx-auto mt-6 inline-flex rounded-full border border-border bg-white/[0.03] p-1 text-xs">
+        <button
+          onClick={() => setMode("ai")}
+          className={`rounded-full px-4 py-1.5 transition-all ${mode === "ai" ? "bg-[var(--gradient-primary)] text-white shadow-[var(--shadow-glow)]" : "text-muted-foreground"}`}
+        >✨ AI remove background</button>
+        <button
+          onClick={() => setMode("keep")}
+          className={`rounded-full px-4 py-1.5 transition-all ${mode === "keep" ? "bg-[var(--gradient-primary)] text-white shadow-[var(--shadow-glow)]" : "text-muted-foreground"}`}
+        >⚡ Keep original · instant</button>
+      </div>
+
       <label
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
           e.preventDefault(); setDragging(false);
           const f = e.dataTransfer.files[0];
-          if (f) onUpload(f);
+          if (f) submit(f);
         }}
-        className={`mt-10 block cursor-pointer rounded-3xl border-2 border-dashed p-12 transition-all ${
+        className={`mt-6 block cursor-pointer rounded-3xl border-2 border-dashed p-12 transition-all ${
           dragging ? "border-[var(--violet)] bg-[var(--violet)]/10" : "border-border bg-white/[0.02] hover:bg-white/[0.05]"
         }`}
       >
-        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])} />
+        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && submit(e.target.files[0])} />
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--gradient-primary)] shadow-[var(--shadow-glow)]">
           <Upload className="h-7 w-7 text-white" />
         </div>
         <div className="mt-5 font-display text-lg font-medium">Drop your photo here</div>
-        <div className="mt-1 text-sm text-muted-foreground">or click to browse</div>
+        <div className="mt-1 text-sm text-muted-foreground">
+          {mode === "ai" ? "AI will remove the background (~8s)" : "Skip AI — ready in under a second"}
+        </div>
       </label>
 
       {error && (
@@ -392,33 +457,57 @@ function UploadView({ onUpload, error }: { onUpload: (f: File) => void; error: s
   );
 }
 
-function ProcessingView({ step }: { step: number }) {
+function ProcessingView({ step, bgProgress, skipBg }: { step: number; bgProgress: number; skipBg: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-      className="mx-auto flex max-w-xl flex-col items-center py-24 text-center"
+      className="mx-auto flex max-w-xl flex-col items-center py-20 text-center"
     >
       <div className="relative mb-8">
         <div className="absolute inset-0 animate-pulse-glow rounded-full bg-[var(--violet)] blur-2xl" />
-        <div className="relative grid h-20 w-20 place-items-center rounded-full bg-[var(--gradient-primary)] shadow-[var(--shadow-glow)]">
-          <Loader2 className="h-9 w-9 animate-spin text-white" />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          className="absolute -inset-4 rounded-full border-2 border-dashed border-[var(--violet)]/40"
+        />
+        <div className="relative grid h-24 w-24 place-items-center rounded-full bg-[var(--gradient-primary)] shadow-[var(--shadow-glow)]">
+          <Sparkles className="h-10 w-10 text-white" />
         </div>
       </div>
-      <h2 className="font-display text-3xl font-semibold">AI is working…</h2>
-      <p className="mt-2 text-muted-foreground">This usually takes 5–15 seconds.</p>
+      <h2 className="font-display text-3xl font-semibold">
+        {skipBg ? "Optimizing your photo…" : "AI is working…"}
+      </h2>
+      <p className="mt-2 text-muted-foreground">
+        {skipBg ? "Ready in a moment." : "Removing background — usually 5–10 seconds."}
+      </p>
 
-      <div className="mt-10 w-full space-y-3 rounded-2xl glass p-5 text-left">
+      <div className="mt-8 w-full space-y-3 rounded-2xl glass p-5 text-left">
         {PIPELINE.map((label, i) => {
           const done = i < step;
           const active = i === step;
+          const isBgStep = i === 2;
           return (
-            <div key={label} className="flex items-center gap-3">
-              <div className={`grid h-6 w-6 place-items-center rounded-full transition-all ${
-                done ? "bg-[var(--violet)]" : active ? "bg-[var(--violet)]/30" : "bg-white/5"
-              }`}>
-                {done ? <Check className="h-3 w-3 text-white" /> : active ? <Loader2 className="h-3 w-3 animate-spin text-[var(--violet)]" /> : null}
+            <div key={label}>
+              <div className="flex items-center gap-3">
+                <div className={`grid h-6 w-6 place-items-center rounded-full transition-all ${
+                  done ? "bg-[var(--violet)]" : active ? "bg-[var(--violet)]/30" : "bg-white/5"
+                }`}>
+                  {done ? <Check className="h-3 w-3 text-white" /> : active ? <Loader2 className="h-3 w-3 animate-spin text-[var(--violet)]" /> : null}
+                </div>
+                <span className={`text-sm ${done || active ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+                {active && isBgStep && !skipBg && (
+                  <span className="ml-auto font-mono text-[10px] text-[var(--violet)]">{Math.round(bgProgress * 100)}%</span>
+                )}
               </div>
-              <span className={`text-sm ${done ? "text-foreground" : active ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+              {active && isBgStep && !skipBg && (
+                <div className="ml-9 mt-2 h-1 overflow-hidden rounded-full bg-white/5">
+                  <motion.div
+                    className="h-full bg-[var(--gradient-primary)]"
+                    style={{ width: `${bgProgress * 100}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
@@ -435,26 +524,28 @@ function PrintModal({
   getPhoto: () => HTMLCanvasElement | null;
   onExport: (sheet: HTMLCanvasElement, w: number, h: number, type: "png" | "jpg" | "pdf") => void;
 }) {
-  const [copies, setCopies] = useState(8);
+  const [copies, setCopies] = useState(9);
   const [sheetId, setSheetId] = useState("4r");
-  const [cutMarks, setCutMarks] = useState(true);
+  const [cutMarks, setCutMarks] = useState(false);
+  const [border, setBorder] = useState(true);
+  const [gapMm, setGapMm] = useState(2);
   const sheet = PRINT_SIZES.find((s) => s.id === sheetId)!;
   const previewRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const photo = getPhoto();
     if (!photo) return;
-    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, 150, cutMarks);
+    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, 150, cutMarks, { gapMm, border });
     const c = previewRef.current!;
     c.width = sheetCanvas.width;
     c.height = sheetCanvas.height;
     c.getContext("2d")!.drawImage(sheetCanvas, 0, 0);
-  }, [copies, sheetId, cutMarks, preset, getPhoto, sheet]);
+  }, [copies, sheetId, cutMarks, border, gapMm, preset, getPhoto, sheet]);
 
   const handleExport = (type: "png" | "jpg" | "pdf") => {
     const photo = getPhoto();
     if (!photo) return;
-    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, preset.dpi, cutMarks);
+    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, preset.dpi, cutMarks, { gapMm, border });
     onExport(sheetCanvas, sheet.w, sheet.h, type);
   };
 
@@ -488,7 +579,7 @@ function PrintModal({
                 ))}
               </div>
             </Panel>
-            <Panel title="Copies">
+            <Panel title="Layout">
               <div className="grid grid-cols-4 gap-2">
                 {[4, 6, 8, 9, 12, 16].map((n) => (
                   <button
@@ -499,9 +590,16 @@ function PrintModal({
                   >{n}</button>
                 ))}
               </div>
-              <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="mt-3">
+                <Slider label="Gap (mm)" value={gapMm} min={0} max={8} onChange={setGapMm} />
+              </div>
+              <label className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Thin border per photo</span>
+                <input type="checkbox" checked={border} onChange={(e) => setBorder(e.target.checked)} />
+              </label>
+              <label className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Corner cut marks</span>
                 <input type="checkbox" checked={cutMarks} onChange={(e) => setCutMarks(e.target.checked)} />
-                Show cut marks
               </label>
             </Panel>
             <div className="grid grid-cols-3 gap-2">
