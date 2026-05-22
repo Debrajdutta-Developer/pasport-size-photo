@@ -524,26 +524,28 @@ function PrintModal({
   getPhoto: () => HTMLCanvasElement | null;
   onExport: (sheet: HTMLCanvasElement, w: number, h: number, type: "png" | "jpg" | "pdf") => void;
 }) {
-  const [copies, setCopies] = useState(8);
+  const [copies, setCopies] = useState(9);
   const [sheetId, setSheetId] = useState("4r");
-  const [cutMarks, setCutMarks] = useState(true);
+  const [cutMarks, setCutMarks] = useState(false);
+  const [border, setBorder] = useState(true);
+  const [gapMm, setGapMm] = useState(2);
   const sheet = PRINT_SIZES.find((s) => s.id === sheetId)!;
   const previewRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const photo = getPhoto();
     if (!photo) return;
-    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, 150, cutMarks);
+    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, 150, cutMarks, { gapMm, border });
     const c = previewRef.current!;
     c.width = sheetCanvas.width;
     c.height = sheetCanvas.height;
     c.getContext("2d")!.drawImage(sheetCanvas, 0, 0);
-  }, [copies, sheetId, cutMarks, preset, getPhoto, sheet]);
+  }, [copies, sheetId, cutMarks, border, gapMm, preset, getPhoto, sheet]);
 
   const handleExport = (type: "png" | "jpg" | "pdf") => {
     const photo = getPhoto();
     if (!photo) return;
-    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, preset.dpi, cutMarks);
+    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, preset.dpi, cutMarks, { gapMm, border });
     onExport(sheetCanvas, sheet.w, sheet.h, type);
   };
 
@@ -577,7 +579,7 @@ function PrintModal({
                 ))}
               </div>
             </Panel>
-            <Panel title="Copies">
+            <Panel title="Layout">
               <div className="grid grid-cols-4 gap-2">
                 {[4, 6, 8, 9, 12, 16].map((n) => (
                   <button
@@ -588,9 +590,16 @@ function PrintModal({
                   >{n}</button>
                 ))}
               </div>
-              <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="mt-3">
+                <Slider label="Gap (mm)" value={gapMm} min={0} max={8} onChange={setGapMm} />
+              </div>
+              <label className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Thin border per photo</span>
+                <input type="checkbox" checked={border} onChange={(e) => setBorder(e.target.checked)} />
+              </label>
+              <label className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Corner cut marks</span>
                 <input type="checkbox" checked={cutMarks} onChange={(e) => setCutMarks(e.target.checked)} />
-                Show cut marks
               </label>
             </Panel>
             <div className="grid grid-cols-3 gap-2">
