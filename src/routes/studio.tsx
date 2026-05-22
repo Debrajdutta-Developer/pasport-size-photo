@@ -216,11 +216,34 @@ function Studio() {
                 <div className="relative mx-auto flex justify-center rounded-2xl bg-black/40 p-6">
                   <div className="relative">
                     <canvas ref={canvasRef} className="max-h-[70vh] rounded-xl shadow-[var(--shadow-elegant)]" />
-                    {/* Safe-zone guides */}
-                    <div className="pointer-events-none absolute inset-0 rounded-xl border border-[var(--violet)]/30">
-                      <div className="absolute inset-x-[12%] top-[13%] h-[55%] rounded-md border border-dashed border-[var(--violet)]/50" />
-                      <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 font-mono text-[10px] text-[var(--violet)]">SAFE ZONE</span>
-                    </div>
+                    {showGuides && (
+                      <div className="pointer-events-none absolute inset-0 rounded-xl">
+                        {/* Frame */}
+                        <div className="absolute inset-0 rounded-xl border border-[var(--violet)]/40" />
+                        {/* Head height band (preset compliant) */}
+                        <div
+                          className="absolute inset-x-[10%] border-y border-dashed border-[var(--violet)]/60"
+                          style={{
+                            top: `${(1 - preset.headMax / preset.height) * 50 + 5}%`,
+                            height: `${(preset.headMax / preset.height) * 100 - 8}%`,
+                          }}
+                        />
+                        {/* Face oval guide */}
+                        <div
+                          className="absolute left-1/2 -translate-x-1/2 rounded-[50%] border-2 border-[var(--violet)]/70 animate-pulse-glow"
+                          style={{
+                            top: "13%",
+                            width: "44%",
+                            height: `${((preset.headMin + preset.headMax) / 2 / preset.height) * 100}%`,
+                          }}
+                        />
+                        {/* Center crosshair */}
+                        <div className="absolute left-1/2 top-0 h-full w-px bg-[var(--violet)]/20" />
+                        <div className="absolute left-0 top-1/2 h-px w-full bg-[var(--violet)]/20" />
+                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 font-mono text-[10px] text-[var(--violet)]">FACE GUIDE</span>
+                        <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 font-mono text-[10px] text-emerald-400">● LIVE</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {validations.length > 0 && (
