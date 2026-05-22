@@ -36,11 +36,14 @@ const PIPELINE = [
 function Studio() {
   const [stage, setStage] = useState<Stage>("upload");
   const [pipelineStep, setPipelineStep] = useState(0);
+  const [bgProgress, setBgProgress] = useState(0);
   const [sourceImg, setSourceImg] = useState<HTMLImageElement | null>(null);
   const [cutoutCanvas, setCutoutCanvas] = useState<HTMLCanvasElement | null>(null);
   const [face, setFace] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [preset, setPreset] = useState<Preset>(PRESETS[0]);
   const [bgColor, setBgColor] = useState(BG_COLORS[0].color);
+  const [keepBackground, setKeepBackground] = useState(false);
+  const [showGuides, setShowGuides] = useState(true);
   const [adjustments, setAdjustments] = useState<Adjustments>(DEFAULT_ADJUSTMENTS);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -48,7 +51,7 @@ function Studio() {
   const [printOpen, setPrintOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const handleUpload = useCallback(async (file: File) => {
+  const runPipeline = useCallback(async (file: File, skipBg: boolean) => {
     setError(null);
     if (!file.type.startsWith("image/")) {
       setError("Please upload an image file.");
@@ -56,6 +59,7 @@ function Studio() {
     }
     setStage("processing");
     setPipelineStep(0);
+    setBgProgress(0);
     try {
       const img = await loadImageFromFile(file);
       if (img.naturalWidth < 400 || img.naturalHeight < 400) {
@@ -64,8 +68,17 @@ function Studio() {
       setPipelineStep(1);
       const f = await detectFace(img);
       setPipelineStep(2);
-      await tick();
-      const cutout = await removeImageBackground(img);
+      let cutout: HTMLCanvasElement;
+      if (skipBg) {
+        // Skip heavy model — wrap source image as canvas (fast path)
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext("2d")!.drawImage(img, 0, 0);
+        cutout = c;
+        setBgProgress(1);
+      } else {
+        cutout = await removeImageBackground(img, (p) => setBgProgress(p));
+      }
       setPipelineStep(3);
       await tick();
       setPipelineStep(4);
@@ -75,6 +88,7 @@ function Studio() {
       setSourceImg(img);
       setCutoutCanvas(cutout);
       setFace(f);
+      setKeepBackground(skipBg);
       setStage("edit");
     } catch (e) {
       console.error(e);
@@ -82,6 +96,9 @@ function Studio() {
       setStage("upload");
     }
   }, []);
+
+  const handleUpload = useCallback((file: File) => runPipeline(file, false), [runPipeline]);
+  const handleUploadKeepBg = useCallback((file: File) => runPipeline(file, true), [runPipeline]);
 
   // Live preview render
   useEffect(() => {
