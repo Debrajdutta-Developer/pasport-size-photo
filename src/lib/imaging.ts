@@ -160,7 +160,7 @@ export async function removeImageBackground(
   const blob = await removeBackground(input, {
     model: "isnet",
     output: { format: "image/png", quality: 1 },
-    progress: (_key, current, total) => {
+    progress: (_key: string, current: number, total: number) => {
       if (onProgress && total) onProgress(current / total);
     },
   } as any);
