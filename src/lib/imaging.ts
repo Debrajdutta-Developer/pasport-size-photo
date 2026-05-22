@@ -150,6 +150,7 @@ export function renderPassport(
 
 /** Remove background using @imgly/background-removal (browser-side). */
 export async function removeImageBackground(src: HTMLImageElement | Blob): Promise<HTMLCanvasElement> {
+  const { removeBackground } = await import("@imgly/background-removal");
   const input = src instanceof Blob ? src : await imageToBlob(src);
   const blob = await removeBackground(input);
   const img = await loadImageFromBlob(blob);
