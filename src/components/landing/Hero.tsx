@@ -62,7 +62,7 @@ export function Hero() {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="mt-8 flex flex-wrap items-center gap-3"
             >
-              <a href="#pricing" className="btn-hero">
+              <a href="/studio" className="btn-hero">
                 Create my passport photo <ArrowRight className="h-4 w-4" />
               </a>
               <a href="#demo" className="btn-ghost-glow">

@@ -21,8 +21,8 @@ export function Nav() {
         <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
         <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
       </nav>
-      <a href="#pricing" className="btn-hero text-sm" style={{ padding: "0.5rem 1.1rem" }}>
-        Get started
+      <a href="/studio" className="btn-hero text-sm" style={{ padding: "0.5rem 1.1rem" }}>
+        Open Studio
       </a>
     </motion.header>
   );
