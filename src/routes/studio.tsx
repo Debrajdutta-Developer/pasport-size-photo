@@ -457,33 +457,57 @@ function UploadView({ onUpload, onUploadKeepBg, error }: { onUpload: (f: File) =
   );
 }
 
-function ProcessingView({ step }: { step: number }) {
+function ProcessingView({ step, bgProgress, skipBg }: { step: number; bgProgress: number; skipBg: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-      className="mx-auto flex max-w-xl flex-col items-center py-24 text-center"
+      className="mx-auto flex max-w-xl flex-col items-center py-20 text-center"
     >
       <div className="relative mb-8">
         <div className="absolute inset-0 animate-pulse-glow rounded-full bg-[var(--violet)] blur-2xl" />
-        <div className="relative grid h-20 w-20 place-items-center rounded-full bg-[var(--gradient-primary)] shadow-[var(--shadow-glow)]">
-          <Loader2 className="h-9 w-9 animate-spin text-white" />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          className="absolute -inset-4 rounded-full border-2 border-dashed border-[var(--violet)]/40"
+        />
+        <div className="relative grid h-24 w-24 place-items-center rounded-full bg-[var(--gradient-primary)] shadow-[var(--shadow-glow)]">
+          <Sparkles className="h-10 w-10 text-white" />
         </div>
       </div>
-      <h2 className="font-display text-3xl font-semibold">AI is working…</h2>
-      <p className="mt-2 text-muted-foreground">This usually takes 5–15 seconds.</p>
+      <h2 className="font-display text-3xl font-semibold">
+        {skipBg ? "Optimizing your photo…" : "AI is working…"}
+      </h2>
+      <p className="mt-2 text-muted-foreground">
+        {skipBg ? "Ready in a moment." : "Removing background — usually 5–10 seconds."}
+      </p>
 
-      <div className="mt-10 w-full space-y-3 rounded-2xl glass p-5 text-left">
+      <div className="mt-8 w-full space-y-3 rounded-2xl glass p-5 text-left">
         {PIPELINE.map((label, i) => {
           const done = i < step;
           const active = i === step;
+          const isBgStep = i === 2;
           return (
-            <div key={label} className="flex items-center gap-3">
-              <div className={`grid h-6 w-6 place-items-center rounded-full transition-all ${
-                done ? "bg-[var(--violet)]" : active ? "bg-[var(--violet)]/30" : "bg-white/5"
-              }`}>
-                {done ? <Check className="h-3 w-3 text-white" /> : active ? <Loader2 className="h-3 w-3 animate-spin text-[var(--violet)]" /> : null}
+            <div key={label}>
+              <div className="flex items-center gap-3">
+                <div className={`grid h-6 w-6 place-items-center rounded-full transition-all ${
+                  done ? "bg-[var(--violet)]" : active ? "bg-[var(--violet)]/30" : "bg-white/5"
+                }`}>
+                  {done ? <Check className="h-3 w-3 text-white" /> : active ? <Loader2 className="h-3 w-3 animate-spin text-[var(--violet)]" /> : null}
+                </div>
+                <span className={`text-sm ${done || active ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+                {active && isBgStep && !skipBg && (
+                  <span className="ml-auto font-mono text-[10px] text-[var(--violet)]">{Math.round(bgProgress * 100)}%</span>
+                )}
               </div>
-              <span className={`text-sm ${done ? "text-foreground" : active ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+              {active && isBgStep && !skipBg && (
+                <div className="ml-9 mt-2 h-1 overflow-hidden rounded-full bg-white/5">
+                  <motion.div
+                    className="h-full bg-[var(--gradient-primary)]"
+                    style={{ width: `${bgProgress * 100}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
