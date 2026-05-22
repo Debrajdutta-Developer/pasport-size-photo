@@ -148,11 +148,22 @@ export function renderPassport(
   ctx.restore();
 }
 
-/** Remove background using @imgly/background-removal (browser-side). */
-export async function removeImageBackground(src: HTMLImageElement | Blob): Promise<HTMLCanvasElement> {
+/** Remove background using @imgly/background-removal (browser-side).
+ *  Uses the higher-quality isnet model and keeps PNG output for crisp edges
+ *  around hair and fingers. Reports progress so the UI feels responsive. */
+export async function removeImageBackground(
+  src: HTMLImageElement | Blob,
+  onProgress?: (p: number) => void,
+): Promise<HTMLCanvasElement> {
   const { removeBackground } = await import("@imgly/background-removal");
   const input = src instanceof Blob ? src : await imageToBlob(src);
-  const blob = await removeBackground(input);
+  const blob = await removeBackground(input, {
+    model: "isnet",
+    output: { format: "image/png", quality: 1 },
+    progress: (_key, current, total) => {
+      if (onProgress && total) onProgress(current / total);
+    },
+  } as any);
   const img = await loadImageFromBlob(blob);
   const c = document.createElement("canvas");
   c.width = img.naturalWidth;
