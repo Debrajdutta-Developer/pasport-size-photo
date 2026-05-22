@@ -386,8 +386,10 @@ function Slider({ label, value, min, max, onChange }: { label: string; value: nu
   );
 }
 
-function UploadView({ onUpload, error }: { onUpload: (f: File) => void; error: string | null }) {
+function UploadView({ onUpload, onUploadKeepBg, error }: { onUpload: (f: File) => void; onUploadKeepBg: (f: File) => void; error: string | null }) {
   const [dragging, setDragging] = useState(false);
+  const [mode, setMode] = useState<"ai" | "keep">("ai");
+  const submit = (f: File) => (mode === "ai" ? onUpload(f) : onUploadKeepBg(f));
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
@@ -399,24 +401,37 @@ function UploadView({ onUpload, error }: { onUpload: (f: File) => void; error: s
       </h1>
       <p className="mt-4 text-muted-foreground">Any selfie or portrait. JPG, PNG, HEIC. Processed in your browser — your photo never leaves your device.</p>
 
+      <div className="mx-auto mt-6 inline-flex rounded-full border border-border bg-white/[0.03] p-1 text-xs">
+        <button
+          onClick={() => setMode("ai")}
+          className={`rounded-full px-4 py-1.5 transition-all ${mode === "ai" ? "bg-[var(--gradient-primary)] text-white shadow-[var(--shadow-glow)]" : "text-muted-foreground"}`}
+        >✨ AI remove background</button>
+        <button
+          onClick={() => setMode("keep")}
+          className={`rounded-full px-4 py-1.5 transition-all ${mode === "keep" ? "bg-[var(--gradient-primary)] text-white shadow-[var(--shadow-glow)]" : "text-muted-foreground"}`}
+        >⚡ Keep original · instant</button>
+      </div>
+
       <label
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
           e.preventDefault(); setDragging(false);
           const f = e.dataTransfer.files[0];
-          if (f) onUpload(f);
+          if (f) submit(f);
         }}
-        className={`mt-10 block cursor-pointer rounded-3xl border-2 border-dashed p-12 transition-all ${
+        className={`mt-6 block cursor-pointer rounded-3xl border-2 border-dashed p-12 transition-all ${
           dragging ? "border-[var(--violet)] bg-[var(--violet)]/10" : "border-border bg-white/[0.02] hover:bg-white/[0.05]"
         }`}
       >
-        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])} />
+        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && submit(e.target.files[0])} />
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--gradient-primary)] shadow-[var(--shadow-glow)]">
           <Upload className="h-7 w-7 text-white" />
         </div>
         <div className="mt-5 font-display text-lg font-medium">Drop your photo here</div>
-        <div className="mt-1 text-sm text-muted-foreground">or click to browse</div>
+        <div className="mt-1 text-sm text-muted-foreground">
+          {mode === "ai" ? "AI will remove the background (~8s)" : "Skip AI — ready in under a second"}
+        </div>
       </label>
 
       {error && (
