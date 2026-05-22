@@ -142,16 +142,6 @@ function Studio() {
       URL.revokeObjectURL(url);
     }, mime, 0.95);
   };
-    const mime = type === "png" ? "image/png" : "image/jpeg";
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `${name}.${type}`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }, mime, 0.95);
-  };
 
   const exportPhoto = (type: "png" | "jpg") => {
     const c = renderHiRes();
