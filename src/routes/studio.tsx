@@ -277,7 +277,11 @@ function Studio() {
                 </Panel>
 
                 <Panel title="Background">
-                  <div className="grid grid-cols-6 gap-2">
+                  <label className="mb-3 flex items-center justify-between rounded-lg border border-border bg-white/[0.02] px-3 py-2 text-xs">
+                    <span>Keep original background</span>
+                    <input type="checkbox" checked={keepBackground} onChange={(e) => setKeepBackground(e.target.checked)} />
+                  </label>
+                  <div className={`grid grid-cols-6 gap-2 transition-opacity ${keepBackground ? "opacity-30 pointer-events-none" : ""}`}>
                     {BG_COLORS.map((b) => (
                       <button
                         key={b.id}
@@ -290,6 +294,10 @@ function Studio() {
                       />
                     ))}
                   </div>
+                  <label className="mt-3 flex items-center justify-between rounded-lg px-1 text-xs text-muted-foreground">
+                    <span>Show live face guides</span>
+                    <input type="checkbox" checked={showGuides} onChange={(e) => setShowGuides(e.target.checked)} />
+                  </label>
                 </Panel>
 
                 <Panel title="Enhance">
