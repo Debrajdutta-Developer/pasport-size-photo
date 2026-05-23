@@ -9,8 +9,9 @@ import jsPDF from "jspdf";
 import { PRESETS, BG_COLORS, PRINT_SIZES, type Preset } from "@/lib/presets";
 import {
   loadImageFromFile, detectFace, renderPassport, removeImageBackground,
-  buildPrintSheet, mmToPx, DEFAULT_ADJUSTMENTS, type Adjustments,
+  buildPrintSheet, buildStudio4R9, mmToPx, DEFAULT_ADJUSTMENTS, type Adjustments,
 } from "@/lib/imaging";
+
 
 export const Route = createFileRoute("/studio")({
   head: () => ({
@@ -529,25 +530,36 @@ function PrintModal({
   const [cutMarks, setCutMarks] = useState(false);
   const [border, setBorder] = useState(true);
   const [gapMm, setGapMm] = useState(2);
+  const [studioMode, setStudioMode] = useState(true);
   const sheet = PRINT_SIZES.find((s) => s.id === sheetId)!;
   const previewRef = useRef<HTMLCanvasElement>(null);
+  const isStudio = studioMode && copies === 9;
 
   useEffect(() => {
     const photo = getPhoto();
     if (!photo) return;
-    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, 150, cutMarks, { gapMm, border });
+    const sheetCanvas = isStudio
+      ? buildStudio4R9(photo, { border, cutMarks })
+      : buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, 150, cutMarks, { gapMm, border });
     const c = previewRef.current!;
     c.width = sheetCanvas.width;
     c.height = sheetCanvas.height;
     c.getContext("2d")!.drawImage(sheetCanvas, 0, 0);
-  }, [copies, sheetId, cutMarks, border, gapMm, preset, getPhoto, sheet]);
+  }, [copies, sheetId, cutMarks, border, gapMm, preset, getPhoto, sheet, isStudio]);
 
   const handleExport = (type: "png" | "jpg" | "pdf") => {
     const photo = getPhoto();
     if (!photo) return;
+    if (isStudio) {
+      const sheetCanvas = buildStudio4R9(photo, { border, cutMarks });
+      // 1200×1800 px @ 300 DPI = 101.6×152.4 mm (4×6 in portrait)
+      onExport(sheetCanvas, 101.6, 152.4, type);
+      return;
+    }
     const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, preset.dpi, cutMarks, { gapMm, border });
     onExport(sheetCanvas, sheet.w, sheet.h, type);
   };
+
 
   return (
     <motion.div
@@ -567,7 +579,22 @@ function PrintModal({
           </div>
           <div className="space-y-4">
             <h2 className="font-display text-xl font-semibold">Print Sheet</h2>
+
+            <label className="flex items-start gap-3 rounded-2xl border border-[var(--violet)]/40 bg-[var(--violet)]/10 p-3 text-xs">
+              <input
+                type="checkbox" checked={studioMode}
+                onChange={(e) => { setStudioMode(e.target.checked); if (e.target.checked) setCopies(9); }}
+                className="mt-0.5"
+              />
+              <div>
+                <div className="font-medium text-foreground">Studio 3×3 · pixel-perfect</div>
+                <div className="text-muted-foreground">4×6 in @ 300 DPI · 9 photos at 3.5×4.5 cm. Prints to legal size in Photoshop with zero scaling.</div>
+              </div>
+            </label>
+
+            <div className={isStudio ? "pointer-events-none opacity-40" : ""}>
             <Panel title="Sheet size">
+
               <div className="space-y-1">
                 {PRINT_SIZES.map((s) => (
                   <button
@@ -593,7 +620,10 @@ function PrintModal({
               <div className="mt-3">
                 <Slider label="Gap (mm)" value={gapMm} min={0} max={8} onChange={setGapMm} />
               </div>
-              <label className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+            </Panel>
+            </div>
+            <Panel title="Marks">
+              <label className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Thin border per photo</span>
                 <input type="checkbox" checked={border} onChange={(e) => setBorder(e.target.checked)} />
               </label>
@@ -602,6 +632,7 @@ function PrintModal({
                 <input type="checkbox" checked={cutMarks} onChange={(e) => setCutMarks(e.target.checked)} />
               </label>
             </Panel>
+
             <div className="grid grid-cols-3 gap-2">
               <button onClick={() => handleExport("png")} className="btn-ghost-glow text-xs" style={{ padding: "0.5rem" }}>PNG</button>
               <button onClick={() => handleExport("jpg")} className="btn-ghost-glow text-xs" style={{ padding: "0.5rem" }}>JPG</button>
