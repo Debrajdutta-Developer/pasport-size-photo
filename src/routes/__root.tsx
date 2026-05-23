@@ -87,6 +87,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: siteDescription },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/hF937y4t0dhJwYkPgywvHzqcLfR2/social-images/social-1779508155040-41335.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/hF937y4t0dhJwYkPgywvHzqcLfR2/social-images/social-1779508155040-41335.webp" },
+      { name: "description", content: "Studio Snap AI is an advanced web application for creating professional passport photos." },
+      { property: "og:description", content: "Studio Snap AI is an advanced web application for creating professional passport photos." },
+      { name: "twitter:description", content: "Studio Snap AI is an advanced web application for creating professional passport photos." },
     ],
     links: [
       {
