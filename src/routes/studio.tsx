@@ -620,7 +620,10 @@ function PrintModal({
               <div className="mt-3">
                 <Slider label="Gap (mm)" value={gapMm} min={0} max={8} onChange={setGapMm} />
               </div>
-              <label className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+            </Panel>
+            </div>
+            <Panel title="Marks">
+              <label className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Thin border per photo</span>
                 <input type="checkbox" checked={border} onChange={(e) => setBorder(e.target.checked)} />
               </label>
@@ -629,6 +632,7 @@ function PrintModal({
                 <input type="checkbox" checked={cutMarks} onChange={(e) => setCutMarks(e.target.checked)} />
               </label>
             </Panel>
+
             <div className="grid grid-cols-3 gap-2">
               <button onClick={() => handleExport("png")} className="btn-ghost-glow text-xs" style={{ padding: "0.5rem" }}>PNG</button>
               <button onClick={() => handleExport("jpg")} className="btn-ghost-glow text-xs" style={{ padding: "0.5rem" }}>JPG</button>
