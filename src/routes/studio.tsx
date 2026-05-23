@@ -579,7 +579,22 @@ function PrintModal({
           </div>
           <div className="space-y-4">
             <h2 className="font-display text-xl font-semibold">Print Sheet</h2>
+
+            <label className="flex items-start gap-3 rounded-2xl border border-[var(--violet)]/40 bg-[var(--violet)]/10 p-3 text-xs">
+              <input
+                type="checkbox" checked={studioMode}
+                onChange={(e) => { setStudioMode(e.target.checked); if (e.target.checked) setCopies(9); }}
+                className="mt-0.5"
+              />
+              <div>
+                <div className="font-medium text-foreground">Studio 3×3 · pixel-perfect</div>
+                <div className="text-muted-foreground">4×6 in @ 300 DPI · 9 photos at 3.5×4.5 cm. Prints to legal size in Photoshop with zero scaling.</div>
+              </div>
+            </label>
+
+            <div className={isStudio ? "pointer-events-none opacity-40" : ""}>
             <Panel title="Sheet size">
+
               <div className="space-y-1">
                 {PRINT_SIZES.map((s) => (
                   <button
