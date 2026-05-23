@@ -530,25 +530,36 @@ function PrintModal({
   const [cutMarks, setCutMarks] = useState(false);
   const [border, setBorder] = useState(true);
   const [gapMm, setGapMm] = useState(2);
+  const [studioMode, setStudioMode] = useState(true);
   const sheet = PRINT_SIZES.find((s) => s.id === sheetId)!;
   const previewRef = useRef<HTMLCanvasElement>(null);
+  const isStudio = studioMode && copies === 9;
 
   useEffect(() => {
     const photo = getPhoto();
     if (!photo) return;
-    const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, 150, cutMarks, { gapMm, border });
+    const sheetCanvas = isStudio
+      ? buildStudio4R9(photo, { border, cutMarks })
+      : buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, 150, cutMarks, { gapMm, border });
     const c = previewRef.current!;
     c.width = sheetCanvas.width;
     c.height = sheetCanvas.height;
     c.getContext("2d")!.drawImage(sheetCanvas, 0, 0);
-  }, [copies, sheetId, cutMarks, border, gapMm, preset, getPhoto, sheet]);
+  }, [copies, sheetId, cutMarks, border, gapMm, preset, getPhoto, sheet, isStudio]);
 
   const handleExport = (type: "png" | "jpg" | "pdf") => {
     const photo = getPhoto();
     if (!photo) return;
+    if (isStudio) {
+      const sheetCanvas = buildStudio4R9(photo, { border, cutMarks });
+      // 1200×1800 px @ 300 DPI = 101.6×152.4 mm (4×6 in portrait)
+      onExport(sheetCanvas, 101.6, 152.4, type);
+      return;
+    }
     const sheetCanvas = buildPrintSheet(photo, sheet.w, sheet.h, preset.width, preset.height, copies, preset.dpi, cutMarks, { gapMm, border });
     onExport(sheetCanvas, sheet.w, sheet.h, type);
   };
+
 
   return (
     <motion.div
