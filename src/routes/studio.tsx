@@ -9,8 +9,9 @@ import jsPDF from "jspdf";
 import { PRESETS, BG_COLORS, PRINT_SIZES, type Preset } from "@/lib/presets";
 import {
   loadImageFromFile, detectFace, renderPassport, removeImageBackground,
-  buildPrintSheet, mmToPx, DEFAULT_ADJUSTMENTS, type Adjustments,
+  buildPrintSheet, buildStudio4R9, mmToPx, DEFAULT_ADJUSTMENTS, type Adjustments,
 } from "@/lib/imaging";
+
 
 export const Route = createFileRoute("/studio")({
   head: () => ({
