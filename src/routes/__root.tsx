@@ -73,24 +73,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "PasportAi" },
-      { name: "description", content: "Brand Identity: PassportAI
-The Core Value Proposition
-PassportAI: Precision Identity for a Borderless World.
-PassportAI is not just a photo tool; it is an archi" },
+      { name: "description", content: "PassportAI — Precision Identity for a Borderless World. Professional AI passport photo studio." },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "PasportAi" },
-      { property: "og:description", content: "Brand Identity: PassportAI
-The Core Value Proposition
-PassportAI: Precision Identity for a Borderless World.
-PassportAI is not just a photo tool; it is an archi" },
+      { property: "og:description", content: "PassportAI — Precision Identity for a Borderless World. Professional AI passport photo studio." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "PasportAi" },
-      { name: "twitter:description", content: "Brand Identity: PassportAI
-The Core Value Proposition
-PassportAI: Precision Identity for a Borderless World.
-PassportAI is not just a photo tool; it is an archi" },
+      { name: "twitter:description", content: "PassportAI — Precision Identity for a Borderless World. Professional AI passport photo studio." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/hF937y4t0dhJwYkPgywvHzqcLfR2/social-images/social-1779508155040-41335.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/hF937y4t0dhJwYkPgywvHzqcLfR2/social-images/social-1779508155040-41335.webp" },
     ],
