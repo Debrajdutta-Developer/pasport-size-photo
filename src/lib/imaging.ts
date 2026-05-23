@@ -236,7 +236,65 @@ export function buildPrintSheet(
         ctx.strokeStyle = "rgba(0,0,0,0.18)";
         ctx.lineWidth = Math.max(1, Math.round(dpi / 300));
         ctx.strokeRect(x + 0.5, y + 0.5, pw - 1, ph - 1);
+}
+
+/** Studio-grade pixel-perfect 4R (4×6 in portrait) sheet with 9 passport photos
+ *  in a 3×3 grid at exactly 300 DPI. Matches the layout most professional photo
+ *  studios use so the file prints to legal passport size with zero scaling.
+ *
+ *  Canvas:  1200 × 1800 px  (4 × 6 inch @ 300 DPI)
+ *  Photo:    350 ×  450 px  (3.5 × 4.5 cm — 7:9 ratio)
+ *  Margins:  Y 175 px top/bottom, X 50 px (left-aligned grid, matches studio spec)
+ *  Gaps:     50 px horizontal and vertical
+ */
+export function buildStudio4R9(
+  photoCanvas: HTMLCanvasElement,
+  options: { border?: boolean; cutMarks?: boolean } = {},
+): HTMLCanvasElement {
+  const border = options.border ?? true;
+  const cutMarks = options.cutMarks ?? false;
+  const W = 1200;
+  const H = 1800;
+  const pw = 350;
+  const ph = 450;
+  const xs = [50, 450, 850];
+  const ys = [175, 675, 1175];
+
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+  ctx.imageSmoothingQuality = "high";
+  ctx.imageSmoothingEnabled = true;
+
+  for (const y of ys) {
+    for (const x of xs) {
+      ctx.drawImage(photoCanvas, x, y, pw, ph);
+      if (border) {
+        ctx.strokeStyle = "rgba(180,180,180,0.9)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, pw - 1, ph - 1);
       }
+      if (cutMarks) {
+        ctx.strokeStyle = "#888";
+        ctx.lineWidth = 1;
+        const m = 12;
+        [[x, y], [x + pw, y], [x, y + ph], [x + pw, y + ph]].forEach(([cx, cy], i) => {
+          const dxm = i % 2 === 0 ? -m : m;
+          const dym = i < 2 ? -m : m;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy); ctx.lineTo(cx + dxm, cy);
+          ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + dym);
+          ctx.stroke();
+        });
+      }
+    }
+  }
+  return c;
+}
+
       if (cutMarks) {
         ctx.strokeStyle = "#888";
         ctx.lineWidth = 1;
