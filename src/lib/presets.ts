@@ -29,6 +29,16 @@ export const BG_COLORS = [
   { id: "red", name: "Red", color: "#d23030" },
   { id: "cream", name: "Cream", color: "#f5f0e6" },
   { id: "sky", name: "Sky", color: "#cfe8ff" },
+  // Vibrant / architectural shades
+  { id: "steel", name: "Light Steel Blue", color: "#B0C4DE" },
+  { id: "turquoise", name: "Pale Turquoise", color: "#AFEEEE" },
+  { id: "mint", name: "Vibrant Mint", color: "#3EE6B6" },
+  { id: "coral", name: "Coral Pop", color: "#FF6B6B" },
+  { id: "sunshine", name: "Sunshine Yellow", color: "#FFD93D" },
+  { id: "royal", name: "Royal Violet", color: "#6C5CE7" },
+  { id: "magenta", name: "Magenta", color: "#E84393" },
+  { id: "emerald", name: "Emerald", color: "#00B894" },
+  { id: "tangerine", name: "Tangerine", color: "#FF8C42" },
 ];
 
 export const PRINT_SIZES = [
