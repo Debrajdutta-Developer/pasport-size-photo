@@ -1,0 +1,8 @@
+# PassportAI
+
+> Studio-grade AI passport photos in your browser. Face detection, background removal, studio lighting, and print-ready 4R sheets for 40+ country presets.
+
+## Pages
+
+- [Home](/): Overview of PassportAI — features, pricing, and FAQ.
+- [Studio](/studio): Upload a photo and generate a print-ready passport photo.

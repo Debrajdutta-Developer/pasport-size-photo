@@ -17,8 +17,12 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "AI-powered passport photo studio. Face detection, background removal, studio lighting and print-ready 4R sheets. 40+ country presets." },
       { property: "og:title", content: "PassportAI — Studio-grade passport photos" },
       { property: "og:description", content: "From selfie to studio in under 3 seconds. 99.4% government acceptance across 40+ countries." },
+      { property: "og:url", content: "https://pasport-size-photo.lovable.app/" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/hF937y4t0dhJwYkPgywvHzqcLfR2/social-images/social-1779508155040-41335.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/hF937y4t0dhJwYkPgywvHzqcLfR2/social-images/social-1779508155040-41335.webp" },
     ],
     links: [
+      { rel: "canonical", href: "https://pasport-size-photo.lovable.app/" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" },

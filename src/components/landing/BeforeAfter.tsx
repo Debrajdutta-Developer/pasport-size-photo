@@ -44,12 +44,12 @@ export function BeforeAfter() {
             onClick={(e) => updateFromClientX(e.clientX)}
             className="relative aspect-square select-none overflow-hidden rounded-3xl glass shadow-[var(--shadow-elegant)]"
           >
-            <img src={after} alt="After" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={after} alt="Final AI-processed passport photo with clean studio background" className="absolute inset-0 h-full w-full object-cover" />
             <div
               className="absolute inset-0 overflow-hidden"
               style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
             >
-              <img src={before} alt="Before" className="h-full w-full object-cover" />
+              <img src={before} alt="Original portrait photo before AI processing" className="h-full w-full object-cover" />
             </div>
             <div
               className="absolute inset-y-0 w-0.5 bg-white/80 shadow-[0_0_30px_rgba(255,255,255,0.5)]"
