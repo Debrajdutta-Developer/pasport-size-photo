@@ -97,6 +97,8 @@ export function Hero() {
                 alt="AI-enhanced passport photo result"
                 width={768}
                 height={1024}
+                fetchPriority="high"
+                decoding="async"
                 className="rounded-2xl"
               />
               <div className="absolute -bottom-4 -left-4 rounded-2xl glass px-4 py-3 text-xs">

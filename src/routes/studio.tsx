@@ -207,6 +207,7 @@ function Studio() {
               transition={{ duration: 0.5 }}
               className="grid gap-6 lg:grid-cols-[1fr_360px]"
             >
+              <h1 className="sr-only">PassportAI Studio editor</h1>
               {/* Canvas */}
               <div className="rounded-3xl glass p-6" style={{ boxShadow: "var(--shadow-card)" }}>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -294,6 +295,8 @@ function Studio() {
                         key={b.id}
                         onClick={() => setBgColor(b.color)}
                         title={b.name}
+                        aria-label={`Background color: ${b.name}`}
+                        aria-pressed={bgColor === b.color}
                         className={`aspect-square rounded-lg border-2 transition-all ${
                           bgColor === b.color ? "border-[var(--violet)] scale-110" : "border-white/10"
                         }`}
@@ -387,6 +390,7 @@ function Slider({ label, value, min, max, onChange }: { label: string; value: nu
         type="range"
         min={min} max={max} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={label}
         className="w-full accent-[var(--primary)]"
       />
     </div>
@@ -481,9 +485,9 @@ function ProcessingView({ step, bgProgress, skipBg }: { step: number; bgProgress
           <Sparkles className="h-10 w-10 text-white" />
         </div>
       </div>
-      <h2 className="font-display text-3xl font-semibold">
+      <h1 className="font-display text-3xl font-semibold">
         {skipBg ? "Optimizing your photo…" : "AI is working…"}
-      </h2>
+      </h1>
       <p className="mt-2 text-muted-foreground">
         {skipBg ? "Ready in a moment." : "Removing background — usually 5–10 seconds."}
       </p>
