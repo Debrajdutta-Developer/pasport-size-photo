@@ -21,7 +21,7 @@ export function Footer() {
           { t: "Company", l: ["About", "Privacy", "Terms", "Contact"] },
         ].map((c) => (
           <div key={c.t}>
-            <h4 className="font-display text-sm font-semibold">{c.t}</h4>
+            <h3 className="font-display text-sm font-semibold">{c.t}</h3>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
               {c.l.map((i) => (
                 <li key={i}><a href="#" className="hover:text-foreground transition-colors">{i}</a></li>

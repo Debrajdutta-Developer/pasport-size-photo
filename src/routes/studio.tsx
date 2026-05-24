@@ -18,6 +18,12 @@ export const Route = createFileRoute("/studio")({
     meta: [
       { title: "Studio — PassportAI" },
       { name: "description", content: "Upload a photo and let AI generate a studio-grade passport photo in seconds. Free." },
+      { property: "og:title", content: "Studio — PassportAI" },
+      { property: "og:description", content: "Upload a photo and let AI generate a studio-grade passport photo in seconds. Free." },
+      { property: "og:url", content: "https://pasport-size-photo.lovable.app/studio" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://pasport-size-photo.lovable.app/studio" },
     ],
   }),
   component: Studio,
