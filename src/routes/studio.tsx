@@ -368,12 +368,114 @@ function Studio() {
   );
 }
 
-const presetModes: Adjustments[] = [
-  { brightness: 100, contrast: 100, saturation: 100, warmth: 0, smooth: 0, sharpen: 0, vignette: 0 },
-  { brightness: 105, contrast: 108, saturation: 105, warmth: 8, smooth: 25, sharpen: 15, vignette: 0 },
-  { brightness: 108, contrast: 115, saturation: 110, warmth: 12, smooth: 40, sharpen: 30, vignette: 8 },
-  { brightness: 110, contrast: 120, saturation: 115, warmth: 15, smooth: 55, sharpen: 45, vignette: 15 },
+const presetModes: Partial<Adjustments>[] = [
+  { brightness: 100, contrast: 100, saturation: 100, warmth: 0, exposure: 0, tint: 0, highlights: 0, shadows: 0, clarity: 0, smooth: 0, sharpen: 0, vignette: 0, grain: 0, look: "none" },
+  { brightness: 105, contrast: 108, saturation: 105, warmth: 8, exposure: 5, tint: 0, highlights: -10, shadows: 15, clarity: 20, smooth: 25, sharpen: 15, vignette: 0, grain: 0, look: "none" },
+  { brightness: 108, contrast: 115, saturation: 110, warmth: 12, exposure: 8, tint: 2, highlights: -20, shadows: 25, clarity: 35, smooth: 40, sharpen: 30, vignette: 8, grain: 0, look: "none" },
+  { brightness: 110, contrast: 120, saturation: 115, warmth: 15, exposure: 12, tint: 4, highlights: -30, shadows: 35, clarity: 50, smooth: 55, sharpen: 45, vignette: 15, grain: 8, look: "cinematic" },
 ];
+
+function autoEnhance(a: Adjustments): Adjustments {
+  return {
+    ...a,
+    brightness: 106, contrast: 112, saturation: 108, warmth: 10,
+    exposure: 6, tint: 0, highlights: -15, shadows: 20,
+    clarity: 30, smooth: 30, sharpen: 25, vignette: 5,
+  };
+}
+
+const LOOKS: { id: import("@/lib/imaging").LookId; name: string }[] = [
+  { id: "none", name: "Original" },
+  { id: "vivid", name: "Vivid" },
+  { id: "cinematic", name: "Cinematic" },
+  { id: "warm", name: "Warm" },
+  { id: "cool", name: "Cool" },
+  { id: "bw", name: "B&W" },
+  { id: "noir", name: "Noir" },
+  { id: "sepia", name: "Sepia" },
+  { id: "vintage", name: "Vintage" },
+];
+
+type EditorTab = "basic" | "color" | "detail" | "retouch" | "effects" | "looks";
+
+function EditorTabs({ adjustments, setAdjustments }: { adjustments: Adjustments; setAdjustments: (a: Adjustments) => void }) {
+  const [tab, setTab] = useState<EditorTab>("basic");
+  const set = (k: keyof Adjustments, v: number | string) => setAdjustments({ ...adjustments, [k]: v } as Adjustments);
+  const tabs: { id: EditorTab; label: string }[] = [
+    { id: "basic", label: "Light" },
+    { id: "color", label: "Color" },
+    { id: "detail", label: "Detail" },
+    { id: "retouch", label: "Retouch" },
+    { id: "effects", label: "FX" },
+    { id: "looks", label: "Looks" },
+  ];
+  return (
+    <div>
+      <div className="mb-3 grid grid-cols-6 gap-1 rounded-lg bg-white/[0.03] p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`rounded-md py-1 text-[10px] font-medium transition-all ${
+              tab === t.id ? "bg-[var(--violet)]/20 text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >{t.label}</button>
+        ))}
+      </div>
+      {tab === "basic" && (
+        <>
+          <Slider label="Exposure" value={adjustments.exposure} min={-100} max={100} onChange={(v) => set("exposure", v)} />
+          <Slider label="Brightness" value={adjustments.brightness} min={50} max={150} onChange={(v) => set("brightness", v)} />
+          <Slider label="Contrast" value={adjustments.contrast} min={50} max={150} onChange={(v) => set("contrast", v)} />
+          <Slider label="Highlights" value={adjustments.highlights} min={-100} max={100} onChange={(v) => set("highlights", v)} />
+          <Slider label="Shadows" value={adjustments.shadows} min={-100} max={100} onChange={(v) => set("shadows", v)} />
+        </>
+      )}
+      {tab === "color" && (
+        <>
+          <Slider label="Saturation" value={adjustments.saturation} min={0} max={200} onChange={(v) => set("saturation", v)} />
+          <Slider label="Warmth" value={adjustments.warmth} min={-50} max={100} onChange={(v) => set("warmth", v)} />
+          <Slider label="Tint" value={adjustments.tint} min={-50} max={50} onChange={(v) => set("tint", v)} />
+        </>
+      )}
+      {tab === "detail" && (
+        <>
+          <Slider label="Clarity" value={adjustments.clarity} min={0} max={100} onChange={(v) => set("clarity", v)} />
+          <Slider label="Sharpen" value={adjustments.sharpen} min={0} max={100} onChange={(v) => set("sharpen", v)} />
+        </>
+      )}
+      {tab === "retouch" && (
+        <>
+          <Slider label="Skin smooth" value={adjustments.smooth} min={0} max={100} onChange={(v) => set("smooth", v)} />
+          <p className="mt-2 rounded-lg bg-white/[0.03] p-2 text-[10px] text-muted-foreground">
+            Skin smoothing uses soft-light blending — preserves pores and detail while reducing blemishes.
+          </p>
+        </>
+      )}
+      {tab === "effects" && (
+        <>
+          <Slider label="Vignette" value={adjustments.vignette} min={0} max={100} onChange={(v) => set("vignette", v)} />
+          <Slider label="Film grain" value={adjustments.grain} min={0} max={100} onChange={(v) => set("grain", v)} />
+        </>
+      )}
+      {tab === "looks" && (
+        <div className="grid grid-cols-3 gap-1.5">
+          {LOOKS.map((l) => (
+            <button
+              key={l.id}
+              onClick={() => set("look", l.id)}
+              className={`rounded-lg border px-2 py-2 text-[11px] transition-all ${
+                adjustments.look === l.id
+                  ? "border-[var(--violet)] bg-[var(--violet)]/15 text-foreground"
+                  : "border-border bg-white/[0.02] text-muted-foreground hover:bg-white/[0.05]"
+              }`}
+            >{l.name}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
