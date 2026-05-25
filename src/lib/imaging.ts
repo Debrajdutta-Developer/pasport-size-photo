@@ -53,14 +53,24 @@ export async function detectFace(img: HTMLImageElement): Promise<{ x: number; y:
 
 /** Compose final passport photo: crops to preset ratio, places face at the
  *  correct vertical position, applies background and adjustments. */
+export type LookId = "none" | "bw" | "sepia" | "cinematic" | "vivid" | "cool" | "warm" | "noir" | "vintage";
+
 export type Adjustments = {
   brightness: number; // 0-200, 100 = neutral
   contrast: number;
   saturation: number;
   warmth: number; // -100..100
+  exposure: number; // -100..100
+  tint: number; // -50..50 (green<->magenta)
+  highlights: number; // -100..100
+  shadows: number; // -100..100
+  clarity: number; // 0..100
   smooth: number; // 0..100 skin smoothing
   sharpen: number; // 0..100
   vignette: number; // 0..100
+  grain: number; // 0..100
+  rotate: number; // -15..15 deg
+  look: LookId;
 };
 
 export const DEFAULT_ADJUSTMENTS: Adjustments = {
@@ -68,15 +78,41 @@ export const DEFAULT_ADJUSTMENTS: Adjustments = {
   contrast: 108,
   saturation: 105,
   warmth: 8,
+  exposure: 0,
+  tint: 0,
+  highlights: 0,
+  shadows: 0,
+  clarity: 15,
   smooth: 25,
   sharpen: 15,
   vignette: 0,
+  grain: 0,
+  rotate: 0,
+  look: "none",
+};
+
+const LOOK_FILTERS: Record<LookId, string> = {
+  none: "",
+  bw: "grayscale(1) contrast(108%)",
+  sepia: "sepia(0.7) contrast(105%) brightness(102%)",
+  cinematic: "contrast(118%) saturate(85%) brightness(98%) sepia(0.08)",
+  vivid: "saturate(140%) contrast(112%)",
+  cool: "hue-rotate(-12deg) saturate(110%) brightness(102%)",
+  warm: "sepia(0.18) saturate(115%) brightness(103%)",
+  noir: "grayscale(1) contrast(130%) brightness(96%)",
+  vintage: "sepia(0.35) saturate(90%) contrast(95%) brightness(105%)",
 };
 
 export function buildFilterString(a: Adjustments): string {
+  const expMult = 1 + a.exposure / 200;
+  const brightness = Math.max(0, a.brightness * expMult);
   const sepia = a.warmth > 0 ? a.warmth / 200 : 0;
-  const hueShift = a.warmth < 0 ? `hue-rotate(${a.warmth / 5}deg)` : "";
-  return `brightness(${a.brightness}%) contrast(${a.contrast}%) saturate(${a.saturation}%) sepia(${sepia}) ${hueShift}`.trim();
+  const warmHue = a.warmth < 0 ? a.warmth / 5 : 0;
+  const tintHue = a.tint / 2.5;
+  const hue = warmHue + tintHue;
+  const hueShift = hue !== 0 ? `hue-rotate(${hue}deg)` : "";
+  const look = LOOK_FILTERS[a.look] || "";
+  return `brightness(${brightness}%) contrast(${a.contrast}%) saturate(${a.saturation}%) sepia(${sepia}) ${hueShift} ${look}`.trim();
 }
 
 /** Render the passport photo into a target canvas at given output size. */
@@ -87,7 +123,7 @@ export function renderPassport(
   outW: number,
   outH: number,
   bgColor: string,
-  headRatio: number, // head height / total height
+  headRatio: number,
   adjustments: Adjustments,
   offsetX = 0,
   offsetY = 0,
@@ -97,28 +133,51 @@ export function renderPassport(
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, outW, outH);
 
-  // Target face height in output px
   const targetHeadPx = outH * headRatio;
   const scale = (targetHeadPx / face.h) * zoom;
-
   const faceCenterX = face.x + face.w / 2;
-  // Place face center horizontally centered; head top around 12% from top
   const headTopY = face.y;
   const targetHeadTop = outH * 0.13;
 
   const dx = outW / 2 - faceCenterX * scale + offsetX;
   const dy = targetHeadTop - headTopY * scale + offsetY;
 
-  ctx.filter = buildFilterString(adjustments);
-  ctx.imageSmoothingQuality = "high";
   const sw =
     "naturalWidth" in source ? source.naturalWidth : (source as HTMLCanvasElement).width;
   const sh =
     "naturalHeight" in source ? source.naturalHeight : (source as HTMLCanvasElement).height;
+
+  const rot = adjustments.rotate || 0;
+  if (rot !== 0) {
+    ctx.translate(outW / 2, outH / 2);
+    ctx.rotate((rot * Math.PI) / 180);
+    ctx.translate(-outW / 2, -outH / 2);
+  }
+
+  ctx.filter = buildFilterString(adjustments);
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
   ctx.filter = "none";
 
-  // Skin smoothing — soft-light blend preserves detail, avoids haze
+  // Highlights/shadows approximations
+  if (adjustments.highlights !== 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = adjustments.highlights > 0 ? "screen" : "multiply";
+    ctx.globalAlpha = Math.min(0.35, Math.abs(adjustments.highlights) / 200);
+    ctx.filter = `brightness(${100 + Math.abs(adjustments.highlights)}%)`;
+    ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
+    ctx.restore();
+  }
+  if (adjustments.shadows !== 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = adjustments.shadows > 0 ? "lighten" : "darken";
+    ctx.globalAlpha = Math.min(0.35, Math.abs(adjustments.shadows) / 200);
+    ctx.filter = `brightness(${100 + Math.abs(adjustments.shadows) / 2}%) contrast(95%)`;
+    ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
+    ctx.restore();
+  }
+
+  // Skin smoothing
   if (adjustments.smooth > 0) {
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
@@ -128,7 +187,17 @@ export function renderPassport(
     ctx.restore();
   }
 
-  // Sharpen — light unsharp via overlay at low opacity
+  // Clarity
+  if (adjustments.clarity > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "overlay";
+    ctx.globalAlpha = adjustments.clarity / 350;
+    ctx.filter = `contrast(${120 + adjustments.clarity / 2}%) saturate(110%)`;
+    ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
+    ctx.restore();
+  }
+
+  // Sharpen
   if (adjustments.sharpen > 0) {
     ctx.save();
     ctx.globalCompositeOperation = "overlay";
@@ -138,6 +207,8 @@ export function renderPassport(
     ctx.restore();
   }
 
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
   // Vignette
   if (adjustments.vignette > 0) {
     const grad = ctx.createRadialGradient(outW / 2, outH / 2, outH * 0.3, outW / 2, outH / 2, outH * 0.7);
@@ -145,6 +216,33 @@ export function renderPassport(
     grad.addColorStop(1, `rgba(0,0,0,${adjustments.vignette / 200})`);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, outW, outH);
+  }
+
+  // Film grain
+  if (adjustments.grain > 0) {
+    const tile = document.createElement("canvas");
+    const ts = 128;
+    tile.width = ts; tile.height = ts;
+    const tctx = tile.getContext("2d")!;
+    const imgData = tctx.createImageData(ts, ts);
+    const intensity = adjustments.grain * 1.4;
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      const n = (Math.random() - 0.5) * intensity;
+      imgData.data[i] = 128 + n;
+      imgData.data[i + 1] = 128 + n;
+      imgData.data[i + 2] = 128 + n;
+      imgData.data[i + 3] = 255;
+    }
+    tctx.putImageData(imgData, 0, 0);
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    ctx.globalAlpha = Math.min(0.5, adjustments.grain / 150);
+    const pattern = ctx.createPattern(tile, "repeat");
+    if (pattern) {
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, outW, outH);
+    }
+    ctx.restore();
   }
 
   ctx.restore();
