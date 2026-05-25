@@ -258,8 +258,10 @@ export async function removeImageBackground(
   const { removeBackground } = await import("@imgly/background-removal");
   const input = src instanceof Blob ? src : await imageToBlob(src);
   const blob = await removeBackground(input, {
-    model: "isnet",
-    output: { format: "image/png", quality: 1 },
+    // fp16 isnet variant — ~2× faster than the full-precision model with
+    // visually identical edges for portrait subjects.
+    model: "isnet_fp16",
+    output: { format: "image/png", quality: 0.92 },
     progress: (_key: string, current: number, total: number) => {
       if (onProgress && total) onProgress(current / total);
     },
