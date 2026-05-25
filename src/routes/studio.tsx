@@ -625,6 +625,85 @@ function ProcessingView({ step, bgProgress, skipBg }: { step: number; bgProgress
   );
 }
 
+/** Friendly robot whose eyes follow the cursor — keeps users entertained
+ *  while background removal is running. Also has a soft scanning shadow. */
+function CursorRobot() {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [eye, setEye] = useState({ x: 0, y: 0 });
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy) || 1;
+      const max = 4;
+      setEye({ x: (dx / dist) * Math.min(max, dist / 30), y: (dy / dist) * Math.min(max, dist / 30) });
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
+  return (
+    <div ref={wrapRef} className="relative mb-8 h-32 w-32">
+      <div className="absolute inset-0 animate-pulse-glow rounded-full bg-[var(--violet)] blur-2xl" />
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+        className="absolute -inset-3 rounded-full border-2 border-dashed border-[var(--violet)]/40"
+      />
+      {/* Scanning line */}
+      <motion.div
+        initial={{ y: 0, opacity: 0.0 }}
+        animate={{ y: [0, 110, 0], opacity: [0, 0.9, 0] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+        className="pointer-events-none absolute left-2 right-2 top-2 h-[2px] rounded-full bg-gradient-to-r from-transparent via-[var(--violet)] to-transparent shadow-[0_0_12px_var(--violet)]"
+      />
+      <motion.div
+        animate={{ y: [0, -4, 0] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+        className="relative h-full w-full"
+      >
+        <svg viewBox="0 0 120 120" className="h-full w-full drop-shadow-[0_8px_24px_rgba(124,58,237,0.5)]">
+          <defs>
+            <linearGradient id="botBody" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#a78bfa" />
+              <stop offset="100%" stopColor="#6d28d9" />
+            </linearGradient>
+          </defs>
+          {/* Antenna */}
+          <line x1="60" y1="18" x2="60" y2="8" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="60" cy="6" r="3" fill="#f472b6">
+            <animate attributeName="r" values="3;4.5;3" dur="1.2s" repeatCount="indefinite" />
+          </circle>
+          {/* Head */}
+          <rect x="22" y="22" width="76" height="64" rx="18" fill="url(#botBody)" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+          {/* Cheek lights */}
+          <circle cx="30" cy="60" r="2.5" fill="#34d399" />
+          <circle cx="90" cy="60" r="2.5" fill="#fb7185" />
+          {/* Eye sockets */}
+          <rect x="34" y="42" width="22" height="22" rx="11" fill="#0f0f1a" />
+          <rect x="64" y="42" width="22" height="22" rx="11" fill="#0f0f1a" />
+          {/* Pupils — follow cursor */}
+          <circle cx={45 + eye.x} cy={53 + eye.y} r="5" fill="#7dd3fc">
+            <animate attributeName="r" values="5;5;1.5;5;5" keyTimes="0;0.45;0.5;0.55;1" dur="4s" repeatCount="indefinite" />
+          </circle>
+          <circle cx={75 + eye.x} cy={53 + eye.y} r="5" fill="#7dd3fc">
+            <animate attributeName="r" values="5;5;1.5;5;5" keyTimes="0;0.45;0.5;0.55;1" dur="4s" repeatCount="indefinite" />
+          </circle>
+          {/* Smile */}
+          <path d="M 46 74 Q 60 82 74 74" stroke="#f9a8d4" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          {/* Neck/base */}
+          <rect x="48" y="86" width="24" height="6" rx="3" fill="#4c1d95" />
+          <rect x="38" y="92" width="44" height="14" rx="6" fill="url(#botBody)" stroke="rgba(255,255,255,0.2)" />
+        </svg>
+      </motion.div>
+    </div>
+  );
+}
+
 function PrintModal({
   onClose, preset, getPhoto, onExport,
 }: {
