@@ -311,33 +311,38 @@ function Studio() {
                 </Panel>
 
                 <Panel title="Enhance">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => setAdjustments(autoEnhance(adjustments))}
+                      className="flex-1 rounded-lg bg-[var(--gradient-primary)] py-1.5 text-[11px] font-medium text-white shadow-[var(--shadow-glow)]"
+                    >✨ Auto Enhance</button>
+                    <button
+                      onClick={() => setAdjustments(DEFAULT_ADJUSTMENTS)}
+                      className="rounded-lg border border-border px-3 py-1.5 text-[11px] hover:bg-white/[0.05]"
+                    >Reset</button>
+                  </div>
                   <div className="mb-3 grid grid-cols-4 gap-1">
                     {(["Natural", "Studio", "Pro", "Ultra"] as const).map((m, i) => (
                       <button
                         key={m}
-                        onClick={() => setAdjustments(presetModes[i])}
+                        onClick={() => setAdjustments({ ...adjustments, ...presetModes[i] })}
                         className="rounded-lg border border-border bg-white/[0.02] px-2 py-1.5 text-[11px] hover:bg-white/[0.05]"
                       >{m}</button>
                     ))}
                   </div>
-                  <Slider label="Brightness" value={adjustments.brightness} min={50} max={150} onChange={(v) => setAdjustments({ ...adjustments, brightness: v })} />
-                  <Slider label="Contrast" value={adjustments.contrast} min={50} max={150} onChange={(v) => setAdjustments({ ...adjustments, contrast: v })} />
-                  <Slider label="Saturation" value={adjustments.saturation} min={0} max={200} onChange={(v) => setAdjustments({ ...adjustments, saturation: v })} />
-                  <Slider label="Warmth" value={adjustments.warmth} min={-50} max={100} onChange={(v) => setAdjustments({ ...adjustments, warmth: v })} />
-                  <Slider label="Skin smooth" value={adjustments.smooth} min={0} max={100} onChange={(v) => setAdjustments({ ...adjustments, smooth: v })} />
-                  <Slider label="Sharpen" value={adjustments.sharpen} min={0} max={100} onChange={(v) => setAdjustments({ ...adjustments, sharpen: v })} />
-                  <Slider label="Vignette" value={adjustments.vignette} min={0} max={100} onChange={(v) => setAdjustments({ ...adjustments, vignette: v })} />
+                  <EditorTabs adjustments={adjustments} setAdjustments={setAdjustments} />
                 </Panel>
 
-                <Panel title="Position">
+                <Panel title="Position & Crop">
                   <Slider label="Zoom" value={Math.round(zoom * 100)} min={70} max={150} onChange={(v) => setZoom(v / 100)} />
                   <Slider label="Horizontal" value={offset.x} min={-100} max={100} onChange={(v) => setOffset({ ...offset, x: v })} />
                   <Slider label="Vertical" value={offset.y} min={-100} max={100} onChange={(v) => setOffset({ ...offset, y: v })} />
+                  <Slider label="Straighten (°)" value={adjustments.rotate} min={-15} max={15} onChange={(v) => setAdjustments({ ...adjustments, rotate: v })} />
                   <button
                     onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); setAdjustments(DEFAULT_ADJUSTMENTS); }}
                     className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-border py-1.5 text-xs hover:bg-white/[0.05]"
                   >
-                    <RotateCw className="h-3 w-3" /> Reset
+                    <RotateCw className="h-3 w-3" /> Reset all
                   </button>
                 </Panel>
               </aside>
