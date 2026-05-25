@@ -581,17 +581,8 @@ function ProcessingView({ step, bgProgress, skipBg }: { step: number; bgProgress
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
       className="mx-auto flex max-w-xl flex-col items-center py-20 text-center"
     >
-      <div className="relative mb-8">
-        <div className="absolute inset-0 animate-pulse-glow rounded-full bg-[var(--violet)] blur-2xl" />
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-          className="absolute -inset-4 rounded-full border-2 border-dashed border-[var(--violet)]/40"
-        />
-        <div className="relative grid h-24 w-24 place-items-center rounded-full bg-[var(--gradient-primary)] shadow-[var(--shadow-glow)]">
-          <Sparkles className="h-10 w-10 text-white" />
-        </div>
-      </div>
+      <CursorRobot />
+
       <h1 className="font-display text-3xl font-semibold">
         {skipBg ? "Optimizing your photo…" : "AI is working…"}
       </h1>
