@@ -376,7 +376,8 @@ export function buildStudio4R9(
   const H = 1800;
   const pw = 350;
   const ph = 450;
-  const xs = [50, 450, 850];
+  // Center the 3×3 grid: 3 photos × 350 + 2 gaps × 50 = 1150 → margins (1200-1150)/2 = 25
+  const xs = [25, 425, 825];
   const ys = [175, 675, 1175];
 
   const c = document.createElement("canvas");
