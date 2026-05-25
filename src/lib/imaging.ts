@@ -135,7 +135,118 @@ export function renderPassport(
 
   const targetHeadPx = outH * headRatio;
   const scale = (targetHeadPx / face.h) * zoom;
-  const faceCenterX = face.x + face
+  const faceCenterX = face.x + face.w / 2;
+  const headTopY = face.y;
+  const targetHeadTop = outH * 0.13;
+
+  const dx = outW / 2 - faceCenterX * scale + offsetX;
+  const dy = targetHeadTop - headTopY * scale + offsetY;
+
+  const sw =
+    "naturalWidth" in source ? source.naturalWidth : (source as HTMLCanvasElement).width;
+  const sh =
+    "naturalHeight" in source ? source.naturalHeight : (source as HTMLCanvasElement).height;
+
+  const rot = adjustments.rotate || 0;
+  if (rot !== 0) {
+    ctx.translate(outW / 2, outH / 2);
+    ctx.rotate((rot * Math.PI) / 180);
+    ctx.translate(-outW / 2, -outH / 2);
+  }
+
+  ctx.filter = buildFilterString(adjustments);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
+  ctx.filter = "none";
+
+  // Highlights/shadows approximations
+  if (adjustments.highlights !== 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = adjustments.highlights > 0 ? "screen" : "multiply";
+    ctx.globalAlpha = Math.min(0.35, Math.abs(adjustments.highlights) / 200);
+    ctx.filter = `brightness(${100 + Math.abs(adjustments.highlights)}%)`;
+    ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
+    ctx.restore();
+  }
+  if (adjustments.shadows !== 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = adjustments.shadows > 0 ? "lighten" : "darken";
+    ctx.globalAlpha = Math.min(0.35, Math.abs(adjustments.shadows) / 200);
+    ctx.filter = `brightness(${100 + Math.abs(adjustments.shadows) / 2}%) contrast(95%)`;
+    ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
+    ctx.restore();
+  }
+
+  // Skin smoothing
+  if (adjustments.smooth > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    ctx.globalAlpha = Math.min(0.45, adjustments.smooth / 180);
+    ctx.filter = `blur(${0.6 + adjustments.smooth / 40}px)`;
+    ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
+    ctx.restore();
+  }
+
+  // Clarity
+  if (adjustments.clarity > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "overlay";
+    ctx.globalAlpha = adjustments.clarity / 350;
+    ctx.filter = `contrast(${120 + adjustments.clarity / 2}%) saturate(110%)`;
+    ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
+    ctx.restore();
+  }
+
+  // Sharpen
+  if (adjustments.sharpen > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "overlay";
+    ctx.globalAlpha = adjustments.sharpen / 500;
+    ctx.filter = `contrast(${110 + adjustments.sharpen / 4}%)`;
+    ctx.drawImage(source as CanvasImageSource, dx, dy, sw * scale, sh * scale);
+    ctx.restore();
+  }
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // Vignette
+  if (adjustments.vignette > 0) {
+    const grad = ctx.createRadialGradient(outW / 2, outH / 2, outH * 0.3, outW / 2, outH / 2, outH * 0.7);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, `rgba(0,0,0,${adjustments.vignette / 200})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, outW, outH);
+  }
+
+  // Film grain
+  if (adjustments.grain > 0) {
+    const tile = document.createElement("canvas");
+    const ts = 128;
+    tile.width = ts; tile.height = ts;
+    const tctx = tile.getContext("2d")!;
+    const imgData = tctx.createImageData(ts, ts);
+    const intensity = adjustments.grain * 1.4;
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      const n = (Math.random() - 0.5) * intensity;
+      imgData.data[i] = 128 + n;
+      imgData.data[i + 1] = 128 + n;
+      imgData.data[i + 2] = 128 + n;
+      imgData.data[i + 3] = 255;
+    }
+    tctx.putImageData(imgData, 0, 0);
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    ctx.globalAlpha = Math.min(0.5, adjustments.grain / 150);
+    const pattern = ctx.createPattern(tile, "repeat");
+    if (pattern) {
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, outW, outH);
+    }
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
 
 /** Remove background using @imgly/background-removal (browser-side).
  *  Uses the higher-quality isnet model and keeps PNG output for crisp edges
